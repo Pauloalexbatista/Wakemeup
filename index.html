@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>WakeMeUp! - Despertador de Transportes</title>
+  
+  <meta name="theme-color" content="#0ea5e9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WakeMeUp">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-icon">⏰</div>
+        <div class="brand-text">
+          <h1>WakeMeUp!</h1>
+          <p>Before You Go-Go</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="status-badge" class="status-pill">
+          <span class="status-dot"></span>
+          <span id="status-text">Em Espera</span>
+        </div>
+        
+        <button id="btn-pocket-mode" class="btn-icon" title="Modo Bolso (Poupa Ecrã)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Map & Search Area -->
+    <main id="map-wrapper">
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="address-input" class="search-input" placeholder="Pesquisar paragem ou morada..." autocomplete="off">
+        </div>
+        <button id="btn-search" class="btn-locate" title="Pesquisar">Ir</button>
+        <button id="btn-my-location" class="btn-locate" title="Minha Localização">📍</button>
+      </div>
+
+      <div id="map"></div>
+    </main>
+
+    <!-- Bottom Controls Panel -->
+    <section id="controls-panel">
+      <!-- Status & Distance Grid -->
+      <div class="info-cards-row">
+        <div class="info-card">
+          <div class="info-card-label">Distância Restante</div>
+          <div id="metric-distance" class="info-card-val">-- km</div>
+          <div id="metric-eta" class="info-card-sub">Calculando...</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Ciclo de GPS</div>
+          <div id="metric-polling" class="info-card-val">--</div>
+          <div id="metric-target-status" class="info-card-sub">Destino não definido</div>
+        </div>
+      </div>
+
+      <!-- Radius Slider -->
+      <div class="radius-section">
+        <div class="section-label">
+          <span>Raio de Alarme:</span>
+          <span id="radius-value-label" style="color: var(--accent); font-weight: 700;">500 metros</span>
+        </div>
+        <div class="radius-chips">
+          <button class="chip" data-radius="200">200m</button>
+          <button class="chip active" data-radius="500">500m</button>
+          <button class="chip" data-radius="1000">1 km</button>
+          <button class="chip" data-radius="2000">2 km</button>
+          <button class="chip" data-radius="3000">3 km</button>
+        </div>
+      </div>
+
+      <!-- Big Action Button -->
+      <button id="btn-toggle-tracking" class="btn-toggle-alarm activate">
+        <span>🚀 ATIVAR ALARME DE CHEGADA</span>
+      </button>
+    </section>
+
+    <!-- Footer Controls -->
+    <footer>
+      <div class="sound-picker-wrapper">
+        <span>Som:</span>
+        <select id="sound-select" class="sound-select">
+          <option value="synthesizer">Synthesizer (Wham! WakeUp)</option>
+          <option value="siren">Sirene Intensa</option>
+          <option value="chime">Carrilhão Rápido</option>
+          <option value="custom">Ficheiro Áudio Próprio...</option>
+        </select>
+        <input type="file" id="custom-audio-input" accept="audio/*" style="display: none;">
+        <button id="btn-test-sound" class="btn-small">▶ Testar</button>
+      </div>
+      <div>
+        <span id="install-pwa-badge" style="cursor: pointer; color: var(--accent); display: none;">📲 Instalar</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Pocket Mode Dark Overlay -->
+  <div id="pocket-overlay">
+    <div style="font-size: 2.5rem; margin-bottom: 10px;">😴</div>
+    <h2 style="color: #64748b; font-size: 1.2rem;">Modo Bolso / Sono Ativo</h2>
+    <p class="pocket-hint">
+      O ecrã está a poupar bateria.<br>
+      A vigilância de GPS e o alarme continuam a postos.<br><br>
+      <strong>Toca duas vezes no ecrã para voltar.</strong>
+    </p>
+    <div style="margin-top: 30px; font-size: 0.8rem; color: #334155;">
+      Distância atual: <span id="pocket-dist-text">--</span>
+    </div>
+  </div>
+
+  <!-- Fullscreen Alarm Trigger Modal -->
+  <div id="alarm-modal">
+    <div class="alarm-bell-icon">🔔</div>
+    <h1 class="alarm-title">ACORDA!</h1>
+    <p class="alarm-subtitle">CHEGASTE À TUA PARAGEM!</p>
+    <p id="alarm-detail-text" style="color: #fff; margin-bottom: 25px; font-size: 0.95rem;">Estás dentro do raio de alarme.</p>
+    <button id="btn-stop-alarm" class="btn-stop-alarm">JÁ ACORDEI!</button>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- App JS -->
+  <script src="app.js"></script>
+</body>
+</html>
